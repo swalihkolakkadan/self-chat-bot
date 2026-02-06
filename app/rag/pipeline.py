@@ -1,7 +1,6 @@
 """
 RAG Pipeline using LangChain with Google Gemini and Chroma.
 """
-from typing import AsyncGenerator
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain.prompts import PromptTemplate
@@ -29,6 +28,7 @@ llm = ChatGoogleGenerativeAI(
     temperature=0.7,
     convert_system_message_to_human=True
 )
+
 
 # Create prompt template
 prompt_template = PromptTemplate(
@@ -65,24 +65,3 @@ async def get_rag_response(question: str) -> str:
     response = await llm.ainvoke(formatted_prompt)
     return response.content
 
-
-async def stream_rag_response(question: str) -> AsyncGenerator[str, None]:
-    """
-    Stream response chunks from the RAG pipeline.
-    """
-    retriever = get_retriever()
-    
-    # Retrieve relevant documents
-    docs = retriever.get_relevant_documents(question)
-    context = "\n\n".join([doc.page_content for doc in docs])
-    
-    # Format prompt
-    formatted_prompt = prompt_template.format(
-        context=context,
-        question=question
-    )
-    
-    # Stream response
-    async for chunk in llm.astream(formatted_prompt):
-        if chunk.content:
-            yield chunk.content
