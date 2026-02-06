@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: swalih-chatbot-api
+    env: python
+    buildCommand: pip install -r requirements.txt && python -m app.rag.ingest
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
