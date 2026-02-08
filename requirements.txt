@@ -13,8 +13,8 @@ langchain-community>=0.3.0
 langchain-chroma>=0.2.0
 chromadb>=0.4.22
 
-# TTS
-elevenlabs>=0.2.27
+# TTS - Amazon Polly
+boto3>=1.34.0
 
 # Utilities
 httpx>=0.26.0

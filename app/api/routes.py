@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.api.schemas import ChatRequest, ChatResponse
 from app.rag.pipeline import get_rag_response
-from app.tts.elevenlabs import generate_speech_with_alignment
+from app.tts.polly import generate_speech_with_alignment
 from app.utils.rate_limiter import check_rate_limit
 
 router = APIRouter()
@@ -23,7 +23,7 @@ async def chat(request: ChatRequest):
         # Get AI response
         text_response = await get_rag_response(request.message)
         
-        # Generate speech with alignment (if ElevenLabs is configured)
+        # Generate speech with alignment (if AWS Polly is configured)
         audio_base64, alignment = await generate_speech_with_alignment(text_response)
         
         return ChatResponse(

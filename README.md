@@ -8,7 +8,7 @@ AI-powered chatbot backend that responds as Swalih with voice and lip-sync avata
 - **LangChain** - RAG pipeline
 - **Google Gemini** - LLM
 - **Chroma** - Vector database
-- **ElevenLabs** - Text-to-speech
+- **Amazon Polly** - Text-to-speech with viseme alignment for lip-sync animation
 
 ## Setup
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys, GITHUB_TOKEN, and PRIVATE_KNOWLEDGE_REPO
+# Edit .env with your API keys, AWS credentials, GITHUB_TOKEN, and PRIVATE_KNOWLEDGE_REPO
 ```
 
 4. Fetch knowledge base from private repo:
@@ -56,12 +56,54 @@ uvicorn app.main:app --reload
 
 ## API Endpoints
 
-| Endpoint           | Method | Description              |
-| ------------------ | ------ | ------------------------ |
-| `/api/health`      | GET    | Health check             |
-| `/api/chat`        | POST   | Get complete response    |
-| `/api/chat/stream` | POST   | SSE streaming response   |
-| `/api/ingest`      | POST   | Re-ingest knowledge base |
+| Endpoint      | Method | Description              |
+| ------------- | ------ | ------------------------ |
+| `/api/health` | GET    | Health check             |
+| `/api/chat`   | POST   | Get complete response    |
+| `/api/ingest` | POST   | Re-ingest knowledge base |
+
+### Chat Response Format
+
+The `/api/chat` endpoint returns:
+
+```json
+{
+  "text": "Response text...",
+  "audio_base64": "base64_encoded_mp3_audio...",
+  "alignment": {
+    "visemes": [
+      { "time": 0.0, "viseme": "p" },
+      { "time": 0.05, "viseme": "E" },
+      { "time": 0.12, "viseme": "t" }
+    ],
+    "words": [
+      { "time": 0.0, "value": "Hello" },
+      { "time": 0.45, "value": "world" }
+    ]
+  }
+}
+```
+
+### Viseme Reference
+
+Amazon Polly provides these visemes for lip-sync animation:
+
+| Viseme | Description           | Example Phonemes |
+| ------ | --------------------- | ---------------- |
+| `p`    | Closed lips           | p, b, m          |
+| `t`    | Tongue behind teeth   | t, d, n          |
+| `k`    | Back of tongue raised | k, g             |
+| `f`    | Lower lip under teeth | f, v             |
+| `T`    | Tongue between teeth  | th               |
+| `s`    | Teeth together        | s, z             |
+| `S`    | Lips rounded          | sh, ch           |
+| `r`    | Tongue curled         | r                |
+| `a`    | Open mouth            | a                |
+| `e`    | Slightly open         | e                |
+| `i`    | Wide, closed          | i, ee            |
+| `o`    | Rounded, open         | o                |
+| `u`    | Rounded, closed       | u, oo            |
+| `sil`  | Silence               | (pause)          |
 
 ## Knowledge Base
 

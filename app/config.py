@@ -7,8 +7,13 @@ class Settings(BaseSettings):
     
     # API Keys
     google_api_key: str = ""
-    elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = "Adam"  # Default voice
+    
+    # AWS Polly TTS
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
+    polly_voice_id: str = "Matthew"  # Neural voice
+    polly_engine: str = "neural"  # standard, neural, long-form, generative
     
     # CORS
     frontend_url: str = "http://localhost:5173"
@@ -26,6 +31,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra env vars (e.g., legacy ElevenLabs settings)
 
 
 @lru_cache()
