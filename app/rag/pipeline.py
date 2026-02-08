@@ -52,7 +52,7 @@ async def get_rag_response(question: str) -> str:
     retriever = get_retriever()
     
     # Retrieve relevant documents
-    docs = retriever.get_relevant_documents(question)
+    docs = retriever.invoke(question)
     context = "\n\n".join([doc.page_content for doc in docs])
     
     # Format prompt
