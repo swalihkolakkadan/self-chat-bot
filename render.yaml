@@ -2,7 +2,7 @@ services:
   - type: web
     name: swalih-chatbot-api
     env: python
-    buildCommand: pip install -r requirements.txt && python -m app.rag.ingest
+    buildCommand: pip install -r requirements.txt && python scripts/fetch_private_knowledge.py && python -m app.rag.ingest
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
@@ -14,4 +14,8 @@ services:
       - key: ELEVENLABS_VOICE_ID
         sync: false
       - key: FRONTEND_URL
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: PRIVATE_KNOWLEDGE_REPO
         sync: false

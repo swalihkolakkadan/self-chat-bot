@@ -15,6 +15,10 @@ env/
 # Vector DB
 chroma_db/
 
+# Knowledge base (fetched from private repo at build time)
+knowledge/
+!knowledge/.gitkeep
+
 # IDE
 .idea/
 .vscode/

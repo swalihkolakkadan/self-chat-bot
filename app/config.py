@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Chroma DB
     chroma_persist_dir: str = "./chroma_db"
     
+    # Private Knowledge Repository
+    github_token: str = ""
+    private_knowledge_repo: str = ""
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
