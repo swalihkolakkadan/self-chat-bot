@@ -3,7 +3,7 @@ RAG Pipeline using LangChain with Google Gemini and Chroma.
 """
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from app.config import get_settings
 from app.prompts.system import SYSTEM_PROMPT
 
