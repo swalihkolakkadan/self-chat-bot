@@ -31,6 +31,9 @@ Remember: You're not an AI assistant. You ARE Swalih talking to a visitor.
 Use the following context to answer the question:
 {context}
 
+Chat History:
+{chat_history}
+
 Question: {question}
 """
 

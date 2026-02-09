@@ -21,7 +21,7 @@ async def chat(request: ChatRequest):
     
     try:
         # Get AI response
-        text_response = await get_rag_response(request.message)
+        text_response = await get_rag_response(request.message, request.session_id)
         
         # Generate speech with alignment (if AWS Polly is configured)
         audio_base64, alignment = await generate_speech_with_alignment(text_response)
