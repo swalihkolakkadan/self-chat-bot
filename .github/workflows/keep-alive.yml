@@ -1,0 +1,25 @@
+name: Render Keep-Alive
+
+on:
+  schedule:
+    # Run every 14 minutes (Render sleeps after 15 mins)
+    - cron: "*/14 * * * *"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          # Replace this URL with your actual backend URL if different
+          URL="${{ secrets.RENDER_SERVICE_URL }}"
+
+          if [ -z "$URL" ]; then
+            echo "URL secret not found, using default or manual input..."
+            # USER: PLEASE REPLACE THIS LINE WITH YOUR REAL RENDER URL IF YOU DON'T USE SECRETS
+            URL="https://self-chat-bot.onrender.com/" 
+          fi
+
+          echo "Pinging $URL/api/health..."
+          curl -s -o /dev/null -w "%{http_code}" "$URL/api/health"
