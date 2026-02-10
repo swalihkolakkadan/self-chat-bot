@@ -11,6 +11,7 @@ langchain-core>=0.3.0
 langchain-google-genai>=2.0.0
 langchain-community>=0.3.0
 langchain-chroma>=0.2.0
+langchain-text-splitters>=0.3.0
 chromadb>=0.4.22
 
 # TTS - Amazon Polly
