@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
 from app.config import get_settings
-from app.prompts.system import SYSTEM_PROMPT, CONDENSE_PROMPT
+from app.prompts.system import SYSTEM_PROMPT
 from app.services.chat_history import ChatHistoryManager
 
 settings = get_settings()
@@ -39,18 +39,12 @@ prompt_template = PromptTemplate(
     input_variables=["context", "chat_history", "question"]
 )
 
-# Create condense prompt template
-condense_prompt_template = PromptTemplate(
-    template=CONDENSE_PROMPT,
-    input_variables=["chat_history", "question"]
-)
-
 
 def get_retriever():
     """Get the vector store retriever."""
     return vectorstore.as_retriever(
         search_type="similarity",
-        search_kwargs={"k": 5}
+        search_kwargs={"k": 3}
     )
 
 
@@ -59,31 +53,34 @@ async def get_rag_response(question: str, session_id: str = None) -> str:
     Get a complete response from the RAG pipeline with chat history.
     """
     from app.utils.timer import timer
+    import asyncio
     
     retriever = get_retriever()
-    
-    # Get chat history
-    with timer("Get Chat History"):
-        chat_history_str = ChatHistoryManager.get_formatted_history(session_id) if session_id else ""
-    
-    # If we have history, condense the question first
     search_query = question
-    if chat_history_str:
-        with timer("Condense Question (LLM)"):
-            condense_prompt = condense_prompt_template.format(
-                chat_history=chat_history_str,
-                question=question
-            )
-            condensed_response = await llm.ainvoke(condense_prompt)
-            search_query = condensed_response.content.strip()
-            # If the model didn't return a question (sometimes it chats), fallback to original
-            if not search_query.endswith("?"):
-                search_query = question
 
-    # Retrieve relevant documents using the (possibly condensed) query
-    with timer("Retrieve Documents (Vector DB)"):
-        docs = retriever.invoke(search_query)
-        context = "\n\n".join([doc.page_content for doc in docs])
+    # Run history fetching and document retrieval in parallel
+    with timer("Parallel Retrieval (History + Vector DB)"):
+        # Create coroutines for parallel execution
+        # Note: ChatHistoryManager is synchronous/in-memory, so we wrap it
+        # effectively just running it, but allowing the async retriever to start immediately
+        
+        # 1. Get History (Sync wrapped in coroutine for gather, or just called? 
+        # actually since it's fast in-memory, we can just call it, 
+        # BUT to let the retriever start ASAP we should overlap them if possible.
+        # Since ChatHistoryManager is purely in-memory and fast, the benefit is small,
+        # but `retriever.ainvoke` is the big blocker.
+        
+        # Let's start the async retriever first
+        docs_future = retriever.ainvoke(search_query)
+        
+        # While that's running, get the history (it's fast & sync)
+        with timer("Get Chat History"):
+             chat_history_str = ChatHistoryManager.get_formatted_history(session_id) if session_id else ""
+             
+        # Now await the docs
+        with timer("Retrieve Documents (Wait)"):
+            docs = await docs_future
+            context = "\n\n".join([doc.page_content for doc in docs])
     
     # Format prompt with history
     formatted_prompt = prompt_template.format(
