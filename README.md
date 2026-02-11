@@ -10,7 +10,34 @@ AI-powered chatbot backend that responds as Swalih with voice and lip-sync avata
 - **Chroma** - Vector database
 - **Amazon Polly** - Text-to-speech with viseme alignment for lip-sync animation
 
-## Setup
+## Local Development
+
+You can run the backend either natively (faster for dev) or using Docker (better for prod parity).
+
+### Option 1: Native (Recommended for Dev)
+
+1.  **Setup**: Follow steps 1-4 in "Setup" below.
+2.  **Run**: `uvicorn app.main:app --reload`
+    - _Note_: The first run might be slow as it ingests knowledge. Subsequent runs are fast if `chroma_db` exists.
+
+### Option 2: Docker (Recommended for Verification)
+
+Use this to verify the production build process.
+
+1.  **Build**: You _must_ pass your secrets as build args to populate the knowledge base.
+    ```bash
+    docker build \
+      --build-arg GITHUB_TOKEN=your_token \
+      --build-arg PRIVATE_KNOWLEDGE_REPO=owner/repo \
+      --build-arg GOOGLE_API_KEY=your_key \
+      -t swalih-bot-api .
+    ```
+2.  **Run**:
+    ```bash
+    docker run -p 8000:8000 --env-file .env swalih-bot-api
+    ```
+
+## Setup (Native)
 
 1. Create virtual environment:
 

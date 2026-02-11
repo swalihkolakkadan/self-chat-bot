@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # AWS Polly TTS
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
-    aws_region: str = "us-east-1"
+    aws_region: str = "us-east-2"
     polly_voice_id: str = "Matthew"  # Neural voice
     polly_engine: str = "neural"  # standard, neural, long-form, generative
     

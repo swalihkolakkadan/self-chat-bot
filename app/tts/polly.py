@@ -83,35 +83,47 @@ async def generate_speech_with_alignment(
         return None, None
     
     try:
-        # Request 1: Get the audio stream
-        with timer("Polly - Generate Audio"):
-            audio_response = polly_client.synthesize_speech(
-                Engine=settings.polly_engine,
-                OutputFormat='mp3',
-                SampleRate='24000',
-                Text=text,
-                TextType='text',
-                VoiceId=settings.polly_voice_id
-            )
-            
-            # Read audio stream and convert to base64
-            audio_stream = audio_response['AudioStream'].read()
-            audio_base64 = base64.b64encode(audio_stream).decode('utf-8')
+        # Helper function for threaded execution
+        def get_audio():
+            with timer("Polly - Generate Audio"):
+                response = polly_client.synthesize_speech(
+                    Engine=settings.polly_engine,
+                    OutputFormat='mp3',
+                    SampleRate='24000',
+                    Text=text,
+                    TextType='text',
+                    VoiceId=settings.polly_voice_id
+                )
+                return response['AudioStream'].read()
+
+        def get_marks():
+            with timer("Polly - Get Speech Marks"):
+                response = polly_client.synthesize_speech(
+                    Engine=settings.polly_engine,
+                    OutputFormat='json',
+                    Text=text,
+                    TextType='text',
+                    VoiceId=settings.polly_voice_id,
+                    SpeechMarkTypes=['viseme']
+                )
+                return response['AudioStream'].read().decode('utf-8')
+
+        # Run both requests in parallel threads (boto3 is blocking)
+        import asyncio
+        import functools
         
-        # Request 2: Get speech marks (visemes and words)
-        with timer("Polly - Get Speech Marks"):
-            marks_response = polly_client.synthesize_speech(
-                Engine=settings.polly_engine,
-                OutputFormat='json',
-                Text=text,
-                TextType='text',
-                VoiceId=settings.polly_voice_id,
-                SpeechMarkTypes=['viseme', 'word']
-            )
-            
-            # Parse the speech marks
-            speech_marks_data = marks_response['AudioStream'].read().decode('utf-8')
-            visemes, words = parse_speech_marks(speech_marks_data)
+        loop = asyncio.get_running_loop()
+        
+        # Execute in thread pool to avoid blocking the async loop
+        audio_future = loop.run_in_executor(None, get_audio)
+        marks_future = loop.run_in_executor(None, get_marks)
+        
+        # Wait for both to complete
+        audio_stream, speech_marks_data = await asyncio.gather(audio_future, marks_future)
+        
+        # Process results
+        audio_base64 = base64.b64encode(audio_stream).decode('utf-8')
+        visemes, words = parse_speech_marks(speech_marks_data)
         
         alignment = SpeechAlignment(
             visemes=visemes,
