@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
 from app.config import get_settings
-from app.prompts.system import SYSTEM_PROMPT, CONDENSE_PROMPT
+from app.prompts.system import SYSTEM_PROMPT
 from app.services.chat_history import ChatHistoryManager
 
 settings = get_settings()
@@ -39,12 +39,6 @@ prompt_template = PromptTemplate(
     input_variables=["context", "chat_history", "question"]
 )
 
-# Create condense prompt template
-condense_prompt_template = PromptTemplate(
-    template=CONDENSE_PROMPT,
-    input_variables=["chat_history", "question"]
-)
-
 
 def get_retriever():
     """Get the vector store retriever."""
@@ -66,21 +60,9 @@ async def get_rag_response(question: str, session_id: str = None) -> str:
     with timer("Get Chat History"):
         chat_history_str = ChatHistoryManager.get_formatted_history(session_id) if session_id else ""
     
-    # If we have history, condense the question first
     search_query = question
-    if chat_history_str:
-        with timer("Condense Question (LLM)"):
-            condense_prompt = condense_prompt_template.format(
-                chat_history=chat_history_str,
-                question=question
-            )
-            condensed_response = await llm.ainvoke(condense_prompt)
-            search_query = condensed_response.content.strip()
-            # If the model didn't return a question (sometimes it chats), fallback to original
-            if not search_query.endswith("?"):
-                search_query = question
 
-    # Retrieve relevant documents using the (possibly condensed) query
+    # Retrieve relevant documents using the raw question
     with timer("Retrieve Documents (Vector DB)"):
         docs = retriever.invoke(search_query)
         context = "\n\n".join([doc.page_content for doc in docs])
