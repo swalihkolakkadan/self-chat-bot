@@ -1,17 +1,21 @@
 #!/bin/bash
 set -e
 
-# Fetch private knowledge if environment variables are set
-if [ -n "$GITHUB_TOKEN" ] && [ -n "$PRIVATE_KNOWLEDGE_REPO" ]; then
-    echo "Fetching private knowledge..."
-    python scripts/fetch_private_knowledge.py
+# Check if knowledge exists (ingested at build time)
+if [ ! -d "chroma_db" ] || [ -z "$(ls -A chroma_db)" ]; then
+    echo "⚠️  ChromaDB not found or empty. Attempting runtime ingestion (fallback)..."
+    
+    # Fallback to runtime fetch/ingest if not done at build time
+    if [ -n "$GITHUB_TOKEN" ] && [ -n "$PRIVATE_KNOWLEDGE_REPO" ]; then
+        echo "Fetching private knowledge..."
+        python scripts/fetch_private_knowledge.py
+    fi
+    
+    echo "Ingesting knowledge..."
+    python -m app.rag.ingest
 else
-    echo "Skipping private knowledge fetch (env vars not set)"
+    echo "✅ Knowledge base found (ingested at build time)."
 fi
-
-# Ingest knowledge into vector DB
-echo "Ingesting knowledge..."
-python -m app.rag.ingest
 
 # Get port from environment variable or default to 8000
 PORT="${PORT:-8000}"
