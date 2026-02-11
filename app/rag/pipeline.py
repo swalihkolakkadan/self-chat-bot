@@ -12,7 +12,7 @@ settings = get_settings()
 
 # Initialize embeddings
 embeddings = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001",
+    model="models/gemini-embedding-001",
     google_api_key=settings.google_api_key
 )
 
@@ -23,10 +23,12 @@ vectorstore = Chroma(
 )
 
 # Initialize LLM
+# Initialize LLM
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash-lite",
+    model="gemini-2.0-flash",
     google_api_key=settings.google_api_key,
     temperature=0.7,
+    max_output_tokens=150,
     convert_system_message_to_human=True
 )
 
@@ -56,27 +58,32 @@ async def get_rag_response(question: str, session_id: str = None) -> str:
     """
     Get a complete response from the RAG pipeline with chat history.
     """
+    from app.utils.timer import timer
+    
     retriever = get_retriever()
     
     # Get chat history
-    chat_history_str = ChatHistoryManager.get_formatted_history(session_id) if session_id else ""
+    with timer("Get Chat History"):
+        chat_history_str = ChatHistoryManager.get_formatted_history(session_id) if session_id else ""
     
     # If we have history, condense the question first
     search_query = question
     if chat_history_str:
-        condense_prompt = condense_prompt_template.format(
-            chat_history=chat_history_str,
-            question=question
-        )
-        condensed_response = await llm.ainvoke(condense_prompt)
-        search_query = condensed_response.content.strip()
-        # If the model didn't return a question (sometimes it chats), fallback to original
-        if not search_query.endswith("?"):
-            search_query = question
+        with timer("Condense Question (LLM)"):
+            condense_prompt = condense_prompt_template.format(
+                chat_history=chat_history_str,
+                question=question
+            )
+            condensed_response = await llm.ainvoke(condense_prompt)
+            search_query = condensed_response.content.strip()
+            # If the model didn't return a question (sometimes it chats), fallback to original
+            if not search_query.endswith("?"):
+                search_query = question
 
     # Retrieve relevant documents using the (possibly condensed) query
-    docs = retriever.invoke(search_query)
-    context = "\n\n".join([doc.page_content for doc in docs])
+    with timer("Retrieve Documents (Vector DB)"):
+        docs = retriever.invoke(search_query)
+        context = "\n\n".join([doc.page_content for doc in docs])
     
     # Format prompt with history
     formatted_prompt = prompt_template.format(
@@ -86,8 +93,9 @@ async def get_rag_response(question: str, session_id: str = None) -> str:
     )
     
     # Get response
-    response = await llm.ainvoke(formatted_prompt)
-    response_text = response.content
+    with timer("Generate Answer (LLM)"):
+        response = await llm.ainvoke(formatted_prompt)
+        response_text = response.content
     
     # Update history
     if session_id:

@@ -12,27 +12,32 @@ async def chat(request: ChatRequest):
     """
     Chat endpoint - returns complete response with optional audio.
     """
-    # Check rate limit (simplified - would use IP in production)
-    if not check_rate_limit(request.session_id or "anonymous"):
-        raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded. Try again tomorrow!"
-        )
+    from app.utils.timer import timer
     
-    try:
-        # Get AI response
-        text_response = await get_rag_response(request.message, request.session_id)
+    with timer(f"Total Chat Request ({request.session_id})"):
+        # Check rate limit (simplified - would use IP in production)
+        if not check_rate_limit(request.session_id or "anonymous"):
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded. Try again tomorrow!"
+            )
         
-        # Generate speech with alignment (if AWS Polly is configured)
-        audio_base64, alignment = await generate_speech_with_alignment(text_response)
-        
-        return ChatResponse(
-            text=text_response,
-            audio_base64=audio_base64,
-            alignment=alignment
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        try:
+            # Get AI response
+            with timer("RAG Pipeline"):
+                text_response = await get_rag_response(request.message, request.session_id)
+            
+            # Generate speech with alignment (if AWS Polly is configured)
+            with timer("TTS Generation"):
+                audio_base64, alignment = await generate_speech_with_alignment(text_response)
+            
+            return ChatResponse(
+                text=text_response,
+                audio_base64=audio_base64,
+                alignment=alignment
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/ingest")

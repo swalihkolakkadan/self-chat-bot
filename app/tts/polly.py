@@ -76,38 +76,42 @@ async def generate_speech_with_alignment(
     Returns:
         Tuple of (base64_audio, alignment) or (None, None) on error
     """
+    from app.utils.timer import timer
+    
     if not polly_client:
         # Return empty if no AWS credentials configured
         return None, None
     
     try:
         # Request 1: Get the audio stream
-        audio_response = polly_client.synthesize_speech(
-            Engine=settings.polly_engine,
-            OutputFormat='mp3',
-            SampleRate='24000',
-            Text=text,
-            TextType='text',
-            VoiceId=settings.polly_voice_id
-        )
-        
-        # Read audio stream and convert to base64
-        audio_stream = audio_response['AudioStream'].read()
-        audio_base64 = base64.b64encode(audio_stream).decode('utf-8')
+        with timer("Polly - Generate Audio"):
+            audio_response = polly_client.synthesize_speech(
+                Engine=settings.polly_engine,
+                OutputFormat='mp3',
+                SampleRate='24000',
+                Text=text,
+                TextType='text',
+                VoiceId=settings.polly_voice_id
+            )
+            
+            # Read audio stream and convert to base64
+            audio_stream = audio_response['AudioStream'].read()
+            audio_base64 = base64.b64encode(audio_stream).decode('utf-8')
         
         # Request 2: Get speech marks (visemes and words)
-        marks_response = polly_client.synthesize_speech(
-            Engine=settings.polly_engine,
-            OutputFormat='json',
-            Text=text,
-            TextType='text',
-            VoiceId=settings.polly_voice_id,
-            SpeechMarkTypes=['viseme', 'word']
-        )
-        
-        # Parse the speech marks
-        speech_marks_data = marks_response['AudioStream'].read().decode('utf-8')
-        visemes, words = parse_speech_marks(speech_marks_data)
+        with timer("Polly - Get Speech Marks"):
+            marks_response = polly_client.synthesize_speech(
+                Engine=settings.polly_engine,
+                OutputFormat='json',
+                Text=text,
+                TextType='text',
+                VoiceId=settings.polly_voice_id,
+                SpeechMarkTypes=['viseme', 'word']
+            )
+            
+            # Parse the speech marks
+            speech_marks_data = marks_response['AudioStream'].read().decode('utf-8')
+            visemes, words = parse_speech_marks(speech_marks_data)
         
         alignment = SpeechAlignment(
             visemes=visemes,
